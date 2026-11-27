@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>07. 歷年成果專區｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-6 hairline-b flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="font-mono-index text-xs text-[#F37021]">07. [ANNUAL ACHIEVEMENTS]</p>
+        <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">歷年推廣與行動成果專區</h1>
+      </div>
+      <!-- 僅登入者可見管理控制 -->
+      <div id="ach-admin-actions" class="hidden items-center gap-2">
+        <button type="button" id="btn-toggle-editor" class="btn-editorial px-3.5 py-1.5 text-xs">線上編輯面板</button>
+        <button type="button" id="btn-clone-next" class="btn-hermes px-3.5 py-1.5 text-xs">一鍵延續至下一年度</button>
+      </div>
+    </div>
+
+    <!-- 年度 · 場域切換列 -->
+    <div id="ach-switcher" class="flex flex-wrap gap-2 mb-8"></div>
+
+    <!-- 線上編輯面板（登入限定） -->
+    <section id="ach-editor-panel" class="hidden hairline-box p-6 bg-[#FDFBF7] mb-8">
+      <h3 class="font-serif-editorial text-lg mb-4">編輯目前年度成果（支援 Markdown + LaTeX）</h3>
+      <form id="ach-edit-form" class="grid md:grid-cols-2 gap-4 text-xs">
+        <input name="title" placeholder="標題" class="border border-[#E5DDD5] p-2 bg-white" required />
+        <input name="subtitle" placeholder="副標題" class="border border-[#E5DDD5] p-2 bg-white" />
+        <input name="event_date" placeholder="活動日期" class="border border-[#E5DDD5] p-2 bg-white" />
+        <input name="location" placeholder="活動地點" class="border border-[#E5DDD5] p-2 bg-white" />
+        <textarea name="overview_md" rows="4" placeholder="成果總覽 Markdown" class="md:col-span-2 border border-[#E5DDD5] p-2 bg-white"></textarea>
+        <textarea name="committee_md" rows="3" placeholder="執行委員會 Markdown" class="border border-[#E5DDD5] p-2 bg-white"></textarea>
+        <textarea name="staff_md" rows="3" placeholder="工作與合作團隊 Markdown" class="border border-[#E5DDD5] p-2 bg-white"></textarea>
+        <div class="md:col-span-2 flex justify-end gap-2">
+          <button type="submit" class="btn-hermes px-5 py-2">儲存變更</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 成果主體 -->
+    <div id="ach-content"></div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { APP_CONFIG } from "./config/app.config.js";
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { onAuthChange } from "./modules/auth.module.js";
+    import { fetchAchievements, saveAchievement, cloneToNextYear } from "./modules/achievements.module.js";
+    import { renderMarkdown } from "./modules/parser.module.js";
+    import { renderShareBar, bindShareBars } from "./modules/share.module.js";
+    import { escapeHTML, isSafeHttpUrl } from "./modules/sanitizer.module.js";
+
+    let records = [];
+    let currentIdx = 0;
+    let activeTab = "overview";
+
+    const scopeLabel = (id) => APP_CONFIG.ACHIEVEMENT_SCOPES.find((s) => s.id === id)?.label || id;
+
+    onAuthChange((user) => {
+      const box = document.getElementById("ach-admin-actions");
+      if (user) {
+        box.classList.remove("hidden");
+        box.classList.add("flex");
+      } else {
+        box.classList.add("hidden");
+        box.classList.remove("flex");
+        document.getElementById("ach-editor-panel").classList.add("hidden");
+      }
+    });
+
+    async function init() {
+      const { data } = await fetchAchievements();
+      records = data;
+      renderSwitcher();
+      renderCurrent();
+    }
+
+    function renderSwitcher() {
+      const sw = document.getElementById("ach-switcher");
+      sw.innerHTML = records
+        .map(
+          (r, idx) => `
+        <button type="button" data-idx="${idx}" class="px-4 py-2 text-xs font-mono-index border ${
+            idx === currentIdx ? "bg-[#1C1917] text-white border-[#1C1917]" : "bg-white text-[#4A3728] border-[#E5DDD5] hover:border-[#4A3728]"
+          }">
+          ${r.year} · ${scopeLabel(r.scope)}
+        </button>
+      `
+        )
+        .join("");
+
+      sw.querySelectorAll("[data-idx]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          currentIdx = Number(btn.dataset.idx);
+          activeTab = "overview";
+          renderSwitcher();
+          renderCurrent();
+        });
+      });
+    }
+
+    function renderCurrent() {
+      const item = records[currentIdx];
+      if (!item) return;
+
+      // 同步填入編輯表單
+      const form = document.getElementById("ach-edit-form");
+      form.title.value = item.title || "";
+      form.subtitle.value = item.subtitle || "";
+      form.event_date.value = item.event_date || "";
+      form.location.value = item.location || "";
+      form.overview_md.value = item.overview_md || "";
+      form.committee_md.value = item.committee_md || "";
+      form.staff_md.value = item.staff_md || "";
+
+      const metrics = Array.isArray(item.metrics_json) ? item.metrics_json : [];
+      const gallery = Array.isArray(item.gallery_json) ? item.gallery_json : [];
+      const extras = Array.isArray(item.extra_subpages) ? item.extra_subpages : [];
+
+      const tabs = [
+        { slug: "overview", title: "成果總覽", md: item.overview_md },
+        { slug: "committee", title: "執行委員會", md: item.committee_md },
+        { slug: "staff", title: "工作與合作團隊", md: item.staff_md },
+        ...extras.map((e) => ({ slug: e.slug, title: e.title, md: e.content_md }))
+      ];
+      const currentTabObj = tabs.find((t) => t.slug === activeTab) || tabs[0];
+
+      const root = document.getElementById("ach-content");
+      root.innerHTML = `
+        <article class="hairline-box bg-white overflow-hidden">
+          ${isSafeHttpUrl(item.cover_url) ? `<img src="${item.cover_url}" loading="lazy" alt="${escapeHTML(item.title)}" class="w-full h-72 object-cover hairline-b" />` : ""}
+          <div class="p-6 md:p-10">
+            <div class="flex flex-wrap items-center gap-3 font-mono-index text-xs text-[#6B5E54] mb-3">
+              <span class="px-2 py-0.5 bg-[#F37021] text-white">${item.year}</span>
+              <span>${scopeLabel(item.scope)}</span>
+              <span>日期：${escapeHTML(item.event_date || "")}</span>
+              <span>地點：${escapeHTML(item.location || "")}</span>
+              ${item.editor_name ? `<span>編輯：${escapeHTML(item.editor_name)}</span>` : ""}
+            </div>
+            <h2 class="font-serif-editorial text-3xl text-[#1C1917] mb-2">${escapeHTML(item.title)}</h2>
+            <p class="text-sm text-[#6B5E54] mb-6">${escapeHTML(item.subtitle || "")}</p>
+
+            <!-- KPI 指標列 -->
+            ${
+              metrics.length
+                ? `<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    ${metrics
+                      .map(
+                        (m) => `
+                      <div class="saddle-stitch p-4 bg-[#FDFBF7]">
+                        <div class="font-serif-editorial text-2xl text-[#F37021] font-semibold">${escapeHTML(m.value)}</div>
+                        <div class="text-xs text-[#6B5E54] mt-1">${escapeHTML(m.label)}</div>
+                      </div>
+                    `
+                      )
+                      .join("")}
+                  </div>`
+                : ""
+            }
+
+            <!-- 子頁面頁籤切換 -->
+            <div class="flex flex-wrap gap-2 hairline-b pb-3 mb-6">
+              ${tabs
+                .map(
+                  (t) => `
+                <button type="button" data-tab="${t.slug}" class="px-4 py-1.5 text-xs ${
+                    t.slug === currentTabObj.slug ? "bg-[#4A3728] text-white" : "btn-editorial"
+                  }">${escapeHTML(t.title)}</button>
+              `
+                )
+                .join("")}
+            </div>
+
+            <div class="editorial-prose text-sm mb-8">${renderMarkdown(currentTabObj.md || "")}</div>
+
+            <!-- 現場照片牆 -->
+            ${
+              gallery.length
+                ? `<div class="pt-6 hairline-t mb-6">
+                    <h3 class="font-serif-editorial text-lg mb-4">現場紀實照片牆</h3>
+                    <div class="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      ${gallery
+                        .map(
+                          (g) => `
+                        <figure class="hairline-box p-2 bg-[#FDFBF7]">
+                          <img src="${g.url}" loading="lazy" alt="${escapeHTML(g.caption || "")}" class="w-full h-44 object-cover" />
+                          <figcaption class="text-xs text-[#6B5E54] mt-2 px-1">${escapeHTML(g.caption || "")}</figcaption>
+                        </figure>
+                      `
+                        )
+                        .join("")}
+                    </div>
+                  </div>`
+                : ""
+            }
+
+            <div class="pt-4 hairline-t">${renderShareBar({ title: item.title })}</div>
+          </div>
+        </article>
+      `;
+
+      root.querySelectorAll("[data-tab]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeTab = btn.dataset.tab;
+          renderCurrent();
+        });
+      });
+      bindShareBars(root);
+    }
+
+    document.getElementById("btn-toggle-editor").addEventListener("click", () => {
+      document.getElementById("ach-editor-panel").classList.toggle("hidden");
+    });
+
+    document.getElementById("ach-edit-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const updated = { ...records[currentIdx], ...Object.fromEntries(fd.entries()) };
+      try {
+        await saveAchievement(updated);
+        alert("已儲存年度成果。");
+        await init();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    document.getElementById("btn-clone-next").addEventListener("click", async () => {
+      const item = records[currentIdx];
+      if (!item || !confirm(`確定要將「${item.year} 年」架構一鍵延續至 ${Number(item.year) + 1} 年？`)) return;
+      try {
+        await cloneToNextYear(item);
+        alert("已建立下一年度延續檔案！");
+        await init();
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    mountNavbar();
+    mountFooter();
+    init();
+  </script>
+</body>
+</html>
