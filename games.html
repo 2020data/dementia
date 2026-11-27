@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>05. 認知訓練遊戲平台｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-8 hairline-b">
+      <p class="font-mono-index text-xs text-[#F37021]">05. [COGNITIVE TRAINING REGISTRY]</p>
+      <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">高齡友善認知訓練遊戲平台</h1>
+      <p class="text-sm text-[#6B5E54] mt-2">模組化外掛登錄架構：大字體、高對比、無焦慮倒數計時，支援隨時新增內建或外部互動遊戲。</p>
+    </div>
+
+    <!-- 遊戲大廳清單 -->
+    <div id="games-lobby" class="grid md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10"></div>
+
+    <!-- 遊戲遊玩舞台 -->
+    <section id="game-stage-wrapper" class="hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <span class="font-mono-index text-xs text-[#F37021]" id="stage-domain"></span>
+          <h2 class="font-serif-editorial text-2xl text-[#1C1917]" id="stage-title"></h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" data-diff="easy" class="btn-hermes px-3.5 py-1.5 text-xs">初階難度</button>
+          <button type="button" data-diff="hard" class="btn-editorial px-3.5 py-1.5 text-xs">進階難度</button>
+        </div>
+      </div>
+      <p id="stage-instructions" class="text-sm text-[#6B5E54] mb-4"></p>
+      <div id="game-stage"></div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { getCategoryById } from "./config/taxonomy.config.js";
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { fetchGames, mountGamePlugin } from "./modules/games.module.js";
+    import { escapeHTML } from "./modules/sanitizer.module.js";
+
+    let selectedGame = null;
+    let activeDifficulty = "easy";
+
+    async function init() {
+      const { data } = await fetchGames();
+      const lobby = document.getElementById("games-lobby");
+
+      lobby.innerHTML = data
+        .map((g, i) => {
+          const dom = getCategoryById("games", g.cognitive_domain);
+          return `
+          <div class="hairline-box p-6 bg-white flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between font-mono-index text-xs mb-3">
+                <span class="text-[#F37021]">${dom?.code || "COG"}</span>
+                <span class="px-2 py-0.5 bg-[#EFEAE2] text-[#4A3728]">${dom?.label || g.cognitive_domain}</span>
+              </div>
+              <h3 class="font-serif-editorial text-xl text-[#1C1917] mb-2">${escapeHTML(g.title)}</h3>
+              <p class="text-xs text-[#6B5E54] leading-relaxed mb-4">${escapeHTML(g.config_json?.description || "")}</p>
+            </div>
+            <button type="button" data-launch-idx="${i}" class="btn-hermes w-full py-2 text-xs font-mono-index">啟動訓練模組</button>
+          </div>
+        `;
+        })
+        .join("");
+
+      lobby.querySelectorAll("[data-launch-idx]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedGame = data[Number(btn.dataset.launchIdx)];
+          launchSelected();
+        });
+      });
+
+      document.querySelectorAll("[data-diff]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          activeDifficulty = btn.dataset.diff;
+          document.querySelectorAll("[data-diff]").forEach((b) => {
+            b.className = b === btn ? "btn-hermes px-3.5 py-1.5 text-xs" : "btn-editorial px-3.5 py-1.5 text-xs";
+          });
+          if (selectedGame) launchSelected();
+        });
+      });
+
+      // 預設載入第一款遊戲
+      if (data.length > 0) {
+        selectedGame = data[0];
+        launchSelected();
+      }
+    }
+
+    async function launchSelected() {
+      const wrapper = document.getElementById("game-stage-wrapper");
+      wrapper.classList.remove("hidden");
+      const dom = getCategoryById("games", selectedGame.cognitive_domain);
+      document.getElementById("stage-domain").textContent = `[${dom?.label || selectedGame.cognitive_domain}]`;
+      document.getElementById("stage-title").textContent = selectedGame.title;
+      document.getElementById("stage-instructions").textContent = selectedGame.config_json?.instructions || "";
+      await mountGamePlugin(selectedGame, document.getElementById("game-stage"), activeDifficulty);
+      wrapper.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    mountNavbar();
+    mountFooter();
+    init();
+  </script>
+</body>
+</html>
