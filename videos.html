@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>04. 影音與短片專區｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-8 hairline-b flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="font-mono-index text-xs text-[#F37021]">04. [VIDEO & SHORTS ARCHIVE]</p>
+        <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">影片與推廣短片專區</h1>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" data-format="long" class="btn-hermes px-4 py-2 text-xs font-mono-index">專題長片 (16:9)</button>
+        <button type="button" data-format="short" class="btn-editorial px-4 py-2 text-xs font-mono-index">推廣短片 (9:16)</button>
+      </div>
+    </div>
+
+    <div id="video-grid"></div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { fetchVideos, toSafeEmbedUrl } from "./modules/videos.module.js";
+    import { renderMarkdown } from "./modules/parser.module.js";
+    import { escapeHTML } from "./modules/sanitizer.module.js";
+
+    let activeFormat = "long";
+    const formatBtns = document.querySelectorAll("[data-format]");
+
+    formatBtns.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeFormat = btn.dataset.format;
+        formatBtns.forEach((b) => {
+          b.className = b === btn ? "btn-hermes px-4 py-2 text-xs font-mono-index" : "btn-editorial px-4 py-2 text-xs font-mono-index";
+        });
+        loadVideos();
+      });
+    });
+
+    async function loadVideos() {
+      const grid = document.getElementById("video-grid");
+      const { data } = await fetchVideos({ format: activeFormat });
+
+      if (!data.length) {
+        grid.innerHTML = `<div class="hairline-box p-8 text-center text-sm text-[#6B5E54]">此視圖尚無影片。</div>`;
+        return;
+      }
+
+      grid.className = activeFormat === "long" ? "grid md:grid-cols-2 gap-6" : "grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5";
+      grid.innerHTML = data
+        .map((v) => {
+          const embed = toSafeEmbedUrl(v.video_url);
+          const aspect = activeFormat === "long" ? "aspect-video" : "aspect-[9/16]";
+          return `
+          <article class="hairline-box bg-white flex flex-col">
+            <div class="${aspect} bg-[#1C1917] hairline-b">
+              ${
+                embed
+                  ? `<iframe src="${embed}" title="${escapeHTML(v.title)}" loading="lazy" class="w-full h-full" allowfullscreen></iframe>`
+                  : `<a href="${v.video_url}" target="_blank" rel="noopener noreferrer" class="w-full h-full flex items-center justify-center text-white text-xs">前往外部播放</a>`
+              }
+            </div>
+            <div class="p-5 flex-1 flex flex-col">
+              <div class="flex items-center justify-between font-mono-index text-[11px] text-[#6B5E54] mb-2">
+                <span>${v.category_id}</span>
+                <span>${escapeHTML(v.duration || "")}</span>
+              </div>
+              <h2 class="font-serif-editorial text-lg text-[#1C1917] mb-3">${escapeHTML(v.title)}</h2>
+              <div class="editorial-prose text-xs text-[#6B5E54]">${renderMarkdown(v.description_md || "")}</div>
+            </div>
+          </article>
+        `;
+        })
+        .join("");
+    }
+
+    mountNavbar();
+    mountFooter();
+    loadVideos();
+  </script>
+</body>
+</html>
