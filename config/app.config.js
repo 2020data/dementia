@@ -9,8 +9,8 @@ export const APP_CONFIG = {
   COPYRIGHT_OWNER: "Dementia Knowledge Archive Initiative",
 
   // Supabase 公開連線設定（僅允許放 Anon Public Key）
-  SUPABASE_URL: "https://YOUR_PROJECT_ID.supabase.co",
-  SUPABASE_ANON_KEY: "YOUR_SUPABASE_ANON_PUBLIC_KEY",
+  SUPABASE_URL: "https://ctcwfoeuistdubqozquy.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_24BIi1riBgBEuLNzZB5vVQ_IGrJNHpD",
 
   // 外部圖床 ImgBB API Key（供後台直接上傳圖片，亦可直接貼外部圖片網址）
   IMGBB_API_KEY: "",
@@ -20,7 +20,7 @@ export const APP_CONFIG = {
   GOOGLE_CSE_CX: "",
 
   // NotebookLM 單一正式連結（禁止以 iframe 內嵌，由大框啟動面板開啟）
-  NOTEBOOKLM_URL: "https://notebooklm.google.com/notebook/YOUR_NOTEBOOK_ID",
+  NOTEBOOKLM_URL: "https://notebook.google.com/notebook/f188b99b-9ad6-483f-9ea2-e4de119b32e7",
 
   // 預設語系與全頁即時翻譯設定
   DEFAULT_LOCALE: "zh-TW",
