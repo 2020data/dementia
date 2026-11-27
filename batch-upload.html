@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>批次匯入專有名詞與論文｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-6 hairline-b">
+      <p class="font-mono-index text-xs text-[#F37021]">[BATCH IMPORTER · JSON / CSV]</p>
+      <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">專有名詞與研究論文批次匯入</h1>
+    </div>
+
+    <div class="hairline-box p-6 bg-white space-y-5">
+      <div class="grid sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block font-mono-index text-xs text-[#6B5E54] mb-1">匯入目標</label>
+          <select id="batch-target" class="w-full border border-[#E5DDD5] p-2 text-sm bg-[#FAF7F2]">
+            <option value="glossary_terms">專有名詞詞庫（glossary_terms）</option>
+            <option value="research_papers">研究論文典藏（research_papers）</option>
+          </select>
+        </div>
+        <div>
+          <label class="block font-mono-index text-xs text-[#6B5E54] mb-1">選擇 .json 或 .csv 檔案</label>
+          <input type="file" id="batch-file" accept=".json,.csv" class="w-full text-xs border border-[#E5DDD5] p-2 bg-white" />
+        </div>
+      </div>
+
+      <button type="button" id="btn-run-batch" class="btn-hermes px-6 py-2.5 text-sm">解析並批次寫入</button>
+      <pre id="batch-log" class="p-4 bg-[#FAF7F2] saddle-stitch font-mono-index text-xs text-[#4A3728] overflow-x-auto">等待匯入檔案...</pre>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { batchInsertGlossary } from "./modules/glossary.module.js";
+    import { batchInsertPapers } from "./modules/papers.module.js";
+
+    function parseSimpleCSV(text) {
+      const lines = text.trim().split(/\r?\n/);
+      const headers = lines[0].split(",").map((h) => h.trim());
+      return lines.slice(1).map((line) => {
+        const vals = line.split(",").map((v) => v.trim().replace(/^"|"$/g, ""));
+        const obj = {};
+        headers.forEach((h, i) => (obj[h] = vals[i] ?? ""));
+        return obj;
+      });
+    }
+
+    document.getElementById("btn-run-batch").addEventListener("click", async () => {
+      const file = document.getElementById("batch-file").files?.[0];
+      const target = document.getElementById("batch-target").value;
+      const log = document.getElementById("batch-log");
+      if (!file) return (log.textContent = "請先選擇 JSON 或 CSV 檔案。");
+
+      try {
+        const text = await file.text();
+        const records = file.name.endsWith(".csv") ? parseSimpleCSV(text) : JSON.parse(text);
+        if (!Array.isArray(records) || !records.length) throw new Error("檔案內容必須為非空陣列。");
+
+        log.textContent = `解析成功，共 ${records.length} 筆，開始寫入 ${target}...`;
+        const inserted = target === "glossary_terms" ? await batchInsertGlossary(records) : await batchInsertPapers(records);
+        log.textContent = `匯入完成！成功寫入 ${inserted.length} 筆資料。`;
+      } catch (err) {
+        log.textContent = `匯入失敗：${err.message}`;
+      }
+    });
+
+    mountNavbar();
+    mountFooter();
+  </script>
+</body>
+</html>
