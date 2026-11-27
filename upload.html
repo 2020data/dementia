@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>單篇內容新增／編輯｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-6 hairline-b">
+      <p class="font-mono-index text-xs text-[#F37021]">[CONTENT STUDIO]</p>
+      <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">單篇典藏資料新增</h1>
+    </div>
+
+    <div class="hairline-box p-6 bg-white">
+      <div class="mb-5">
+        <label class="block font-mono-index text-xs text-[#6B5E54] mb-1.5">選擇目標資料表</label>
+        <select id="target-table" class="w-full border border-[#E5DDD5] p-2.5 text-sm bg-[#FAF7F2]">
+          <option value="glossary_terms">01. 專有名詞（glossary_terms）</option>
+          <option value="research_papers">02. 研究論文（research_papers）</option>
+          <option value="knowledge_posts">03. 知識推廣文章（knowledge_posts）</option>
+          <option value="videos">04. 影音與短片（videos）</option>
+          <option value="games">05. 認知遊戲登錄（games）</option>
+          <option value="team_members">06. 團隊成員（team_members）</option>
+        </select>
+      </div>
+
+      <form id="dynamic-upload-form" class="space-y-4">
+        <div>
+          <label class="block font-mono-index text-xs text-[#6B5E54] mb-1.5">JSON 資料內容（支援 Markdown + LaTeX 欄位）</label>
+          <textarea id="json-payload" rows="12" class="w-full font-mono-index text-xs border border-[#E5DDD5] p-3 bg-[#FDFBF7]"></textarea>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+          <div class="flex items-center gap-2 text-xs">
+            <input type="file" id="imgbb-file" accept="image/*" class="text-xs" />
+            <button type="button" id="btn-imgbb" class="btn-editorial px-3 py-1.5">上傳至 ImgBB 取得網址</button>
+          </div>
+          <button type="submit" class="btn-hermes px-6 py-2.5 text-sm">寫入 Supabase 資料庫</button>
+        </div>
+        <p id="upload-status" class="text-xs font-mono-index"></p>
+      </form>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { getSupabase, uploadImageToImgBB } from "./modules/supabase.module.js";
+
+    const TEMPLATES = {
+      glossary_terms: { term_zh: "", term_en: "", acronym: "", category_id: "G1", subcategory: "", summary: "", detail_md: "", related_terms: [] },
+      research_papers: { year: 2026, category_id: "P1", title: "", authors: "", journal: "", doi_url: "", abstract_md: "", tags: [] },
+      knowledge_posts: { category_id: "K1", subcategory: "", title: "", cover_url: "", content_md: "", gallery_json: [], is_featured: false },
+      videos: { format: "long", category_id: "V1", title: "", video_url: "", thumbnail_url: "", duration: "05:00", description_md: "" },
+      games: { slug: "new-game", title: "", cognitive_domain: "M-MEM", difficulty: "初階", engine_type: "external", module_path_or_url: "https://", config_json: { description: "", instructions: "" }, is_active: true },
+      team_members: { group_id: "T1", name: "", role: "", bio_md: "", avatar_url: "", specialties: [], sort_order: 10 }
+    };
+
+    const sel = document.getElementById("target-table");
+    const textarea = document.getElementById("json-payload");
+    const statusEl = document.getElementById("upload-status");
+
+    function applyTemplate() {
+      textarea.value = JSON.stringify(TEMPLATES[sel.value], null, 2);
+    }
+    sel.addEventListener("change", applyTemplate);
+    applyTemplate();
+
+    document.getElementById("btn-imgbb").addEventListener("click", async () => {
+      const file = document.getElementById("imgbb-file").files?.[0];
+      if (!file) return alert("請先選擇圖片檔案。");
+      try {
+        statusEl.textContent = "圖片上傳中...";
+        const url = await uploadImageToImgBB(file);
+        statusEl.textContent = `圖片網址：${url}`;
+      } catch (err) {
+        statusEl.textContent = err.message;
+      }
+    });
+
+    document.getElementById("dynamic-upload-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const sb = getSupabase();
+      if (!sb) return (statusEl.textContent = "尚未設定 Supabase 連線。");
+      try {
+        const payload = JSON.parse(textarea.value);
+        const { error } = await sb.from(sel.value).insert(payload);
+        if (error) throw error;
+        statusEl.textContent = "已成功寫入資料庫！";
+      } catch (err) {
+        statusEl.textContent = `寫入失敗：${err.message}`;
+      }
+    });
+
+    mountNavbar();
+    mountFooter();
+  </script>
+</body>
+</html>
