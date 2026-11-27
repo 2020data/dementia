@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>06. 團隊介紹｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-8 hairline-b">
+      <p class="font-mono-index text-xs text-[#F37021]">06. [EDITORIAL & CLINICAL TEAM]</p>
+      <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">跨領域團隊與合作夥伴</h1>
+    </div>
+
+    <div id="team-groups" class="flex flex-wrap gap-2 mb-8"></div>
+    <div id="team-grid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { TAXONOMY, getCategoryById } from "./config/taxonomy.config.js";
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { fetchTeamMembers } from "./modules/team.module.js";
+    import { renderMarkdown } from "./modules/parser.module.js";
+    import { escapeHTML, isSafeHttpUrl } from "./modules/sanitizer.module.js";
+
+    let activeGroup = "ALL";
+    const groupBar = document.getElementById("team-groups");
+    groupBar.innerHTML = [
+      `<button type="button" data-grp="ALL" class="cat-pill active px-3.5 py-2 text-xs">全部組別</button>`,
+      ...TAXONOMY.team.map(
+        (g) => `<button type="button" data-grp="${g.id}" style="--btn-accent:${g.accentColor}" class="cat-pill px-3.5 py-2 text-xs">${g.label}</button>`
+      )
+    ].join("");
+
+    groupBar.querySelectorAll("[data-grp]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeGroup = btn.dataset.grp;
+        groupBar.querySelectorAll("[data-grp]").forEach((b) => b.classList.toggle("active", b === btn));
+        loadTeam();
+      });
+    });
+
+    async function loadTeam() {
+      const { data } = await fetchTeamMembers({ groupId: activeGroup });
+      const grid = document.getElementById("team-grid");
+
+      grid.innerHTML = data
+        .map((m) => {
+          const grp = getCategoryById("team", m.group_id);
+          const initial = (m.name || "T").slice(0, 1);
+          const specs = Array.isArray(m.specialties) ? m.specialties : [];
+          return `
+          <article class="hairline-box p-6 bg-white">
+            <div class="flex items-center gap-4 mb-4">
+              ${
+                isSafeHttpUrl(m.avatar_url)
+                  ? `<img src="${m.avatar_url}" loading="lazy" alt="${escapeHTML(m.name)}" class="w-16 h-16 object-cover border border-[#E5DDD5]" />`
+                  : `<div class="w-16 h-16 bg-[#EFEAE2] border border-[#E5DDD5] flex items-center justify-center font-serif-editorial text-2xl text-[#4A3728]">${escapeHTML(initial)}</div>`
+              }
+              <div>
+                <span class="font-mono-index text-[10px] text-[#F37021]">${grp?.label || m.group_id}</span>
+                <h2 class="font-serif-editorial text-xl text-[#1C1917]">${escapeHTML(m.name)}</h2>
+                <p class="text-xs text-[#6B5E54]">${escapeHTML(m.role || "")}</p>
+              </div>
+            </div>
+            <div class="editorial-prose text-xs text-[#2E2925] mb-4">${renderMarkdown(m.bio_md || "")}</div>
+            <div class="flex flex-wrap gap-1.5">
+              ${specs.map((s) => `<span class="font-mono-index text-[11px] px-2 py-0.5 bg-[#FAF7F2] border border-[#E5DDD5] text-[#4A3728]">${escapeHTML(s)}</span>`).join("")}
+            </div>
+          </article>
+        `;
+        })
+        .join("");
+    }
+
+    mountNavbar();
+    mountFooter();
+    loadTeam();
+  </script>
+</body>
+</html>
