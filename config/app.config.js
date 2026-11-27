@@ -16,8 +16,8 @@ export const APP_CONFIG = {
   IMGBB_API_KEY: "",
 
   // Google 站內搜尋設定
-  SITE_DOMAIN: "your-username.github.io/dementia-archive-platform",
-  GOOGLE_CSE_CX: "",
+  SITE_DOMAIN: "https://2020data.github.io/dementia/",
+  GOOGLE_CSE_CX: "15fc52919ba5a40e8",
 
   // NotebookLM 單一正式連結（禁止以 iframe 內嵌，由大框啟動面板開啟）
   NOTEBOOKLM_URL: "https://notebook.google.com/notebook/f188b99b-9ad6-483f-9ea2-e4de119b32e7",
