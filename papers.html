@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>02. 研究論文典藏｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-8 hairline-b">
+      <p class="font-mono-index text-xs text-[#F37021]">02. [RESEARCH PAPERS]</p>
+      <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">研究論文典藏（年份 × 類別交叉檢索）</h1>
+    </div>
+
+    <div class="grid lg:grid-cols-4 gap-8">
+      <div id="papers-sidebar" class="lg:col-span-1"></div>
+      <div class="lg:col-span-3 space-y-6">
+        <div id="papers-filter"></div>
+        <div id="papers-list" class="space-y-5"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { TAXONOMY, getCategoryById } from "./config/taxonomy.config.js";
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { renderCategorySidebar } from "./components/sidebar.js";
+    import { mountFilterBar } from "./components/filter-bar.js";
+    import { fetchPapers, fetchPaperYears } from "./modules/papers.module.js";
+    import { renderMarkdown } from "./modules/parser.module.js";
+    import { escapeHTML, isSafeHttpUrl } from "./modules/sanitizer.module.js";
+    import { ICONS } from "./modules/icons.module.js";
+
+    const state = { year: "ALL", categoryId: "ALL", search: "" };
+
+    async function init() {
+      const years = await fetchPaperYears();
+
+      document.getElementById("papers-sidebar").appendChild(
+        renderCategorySidebar({
+          title: "研究類別",
+          items: TAXONOMY.papers,
+          onSelect: (id) => {
+            state.categoryId = id;
+            loadPapers();
+          }
+        })
+      );
+
+      mountFilterBar(document.getElementById("papers-filter"), {
+        placeholder: "搜尋論文標題、作者、期刊或關鍵字...",
+        extraSelects: [
+          {
+            name: "year",
+            options: [{ value: "ALL", label: "全部發表年份" }, ...years.map((y) => ({ value: String(y), label: `${y} 年` }))]
+          }
+        ],
+        onChange: ({ search, year }) => {
+          state.search = search;
+          state.year = year;
+          loadPapers();
+        }
+      });
+
+      await loadPapers();
+    }
+
+    async function loadPapers() {
+      const listEl = document.getElementById("papers-list");
+      const { data } = await fetchPapers(state);
+
+      if (!data.length) {
+        listEl.innerHTML = `<div class="hairline-box p-8 text-center text-sm text-[#6B5E54]">查無符合條件的研究論文。</div>`;
+        return;
+      }
+
+      listEl.innerHTML = data
+        .map((p) => {
+          const cat = getCategoryById("papers", p.category_id);
+          const tags = Array.isArray(p.tags) ? p.tags : [];
+          return `
+          <article class="hairline-box p-6 bg-white">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div class="flex items-center gap-2 font-mono-index text-xs">
+                <span class="px-2 py-0.5 bg-[#1C1917] text-white">${p.year}</span>
+                <span class="px-2 py-0.5 bg-[#EFEAE2] text-[#4A3728]">${cat?.code || p.category_id} · ${cat?.label || ""}</span>
+              </div>
+              ${
+                isSafeHttpUrl(p.doi_url)
+                  ? `<a href="${p.doi_url}" target="_blank" rel="noopener noreferrer" class="btn-editorial px-3 py-1 text-xs font-mono-index inline-flex items-center gap-1.5">DOI / 原文 ${ICONS.external}</a>`
+                  : ""
+              }
+            </div>
+            <h2 class="font-serif-editorial text-xl text-[#1C1917] mb-2">${escapeHTML(p.title)}</h2>
+            <p class="text-xs text-[#4A3728] mb-1"><strong>作者：</strong>${escapeHTML(p.authors || "")}</p>
+            <p class="text-xs text-[#6B5E54] italic mb-4">${escapeHTML(p.journal || "")}</p>
+            <div class="editorial-prose text-sm p-4 bg-[#FDFBF7] saddle-stitch">${renderMarkdown(p.abstract_md || "")}</div>
+            ${
+              tags.length
+                ? `<div class="mt-4 flex flex-wrap gap-1.5">${tags.map((t) => `<span class="font-mono-index text-[11px] px-2 py-0.5 bg-[#EFEAE2] text-[#4A3728]">#${escapeHTML(t)}</span>`).join("")}</div>`
+                : ""
+            }
+          </article>
+        `;
+        })
+        .join("");
+    }
+
+    mountNavbar();
+    mountFooter();
+    init();
+  </script>
+</body>
+</html>
