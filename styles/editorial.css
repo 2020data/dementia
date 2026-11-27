@@ -1,0 +1,197 @@
+/* ==========================================================================
+   Hermès-Inspired Editorial Luxury Stylesheet
+   ========================================================================== */
+:root {
+  --bg-ivory: #FAF7F2;
+  --bg-card: #FFFFFF;
+  --bg-cream: #FDFBF7;
+  --bg-taupe: #EFEAE2;
+  --border-linen: #E5DDD5;
+  --accent-hermes: #F37021;
+  --accent-hermes-hover: #D95D14;
+  --text-saddle: #4A3728;
+  --text-ink: #1C1917;
+  --text-muted: #6B5E54;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: var(--bg-ivory);
+  color: var(--text-ink);
+}
+
+body {
+  font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--bg-ivory);
+  color: var(--text-ink);
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 字體層次 */
+.font-serif-editorial {
+  font-family: "Playfair Display", "Cormorant Garamond", "Noto Serif TC", Georgia, serif;
+  letter-spacing: 0.02em;
+}
+
+.font-mono-index {
+  font-family: "JetBrains Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  letter-spacing: 0.04em;
+}
+
+/* 1px 細線工藝與馬鞍針法 */
+.hairline-box {
+  border: 1px solid var(--border-linen);
+  background-color: var(--bg-card);
+  border-radius: 2px;
+}
+
+.hairline-b {
+  border-bottom: 1px solid var(--border-linen);
+}
+
+.hairline-t {
+  border-top: 1px solid var(--border-linen);
+}
+
+.hairline-r {
+  border-right: 1px solid var(--border-linen);
+}
+
+.saddle-stitch {
+  border: 1px dashed #C7B9AC;
+  border-radius: 2px;
+}
+
+.saddle-stitch-b {
+  border-bottom: 1px dashed #C7B9AC;
+}
+
+/* 精準愛馬仕橘按鈕與狀態 */
+.btn-hermes {
+  background-color: var(--accent-hermes);
+  color: #FFFFFF;
+  border: 1px solid var(--accent-hermes);
+  border-radius: 2px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-hermes:hover {
+  background-color: var(--accent-hermes-hover);
+  border-color: var(--accent-hermes-hover);
+}
+
+.btn-editorial {
+  background-color: var(--bg-card);
+  color: var(--text-saddle);
+  border: 1px solid var(--border-linen);
+  border-radius: 2px;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-editorial:hover {
+  border-color: var(--text-saddle);
+  background-color: var(--bg-cream);
+}
+
+/* 專有名詞分類獨立色調按鈕 */
+.cat-pill {
+  --btn-accent: #4A3728;
+  border: 1px solid var(--border-linen);
+  background-color: var(--bg-card);
+  color: var(--text-saddle);
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.cat-pill:hover {
+  border-color: var(--btn-accent);
+  color: var(--btn-accent);
+}
+
+.cat-pill.active {
+  background-color: var(--btn-accent);
+  border-color: var(--btn-accent);
+  color: #FFFFFF;
+}
+
+/* Markdown 與 KaTeX 典藏排版 */
+.editorial-prose h1,
+.editorial-prose h2,
+.editorial-prose h3 {
+  font-family: "Playfair Display", "Noto Serif TC", serif;
+  color: var(--text-ink);
+  margin-top: 1.5em;
+  margin-bottom: 0.6em;
+  font-weight: 600;
+}
+
+.editorial-prose h2 {
+  font-size: 1.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-linen);
+}
+
+.editorial-prose p {
+  margin-bottom: 1rem;
+  color: #2E2925;
+}
+
+.editorial-prose ul,
+.editorial-prose ol {
+  margin: 0.75rem 0 1rem 1.5rem;
+}
+
+.editorial-prose ul {
+  list-style-type: disc;
+}
+
+.editorial-prose ol {
+  list-style-type: decimal;
+}
+
+.editorial-prose blockquote {
+  border-left: 2px solid var(--accent-hermes);
+  padding: 0.5rem 1rem;
+  margin: 1rem 0;
+  background-color: var(--bg-cream);
+  color: var(--text-saddle);
+}
+
+.editorial-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+
+.editorial-prose th,
+.editorial-prose td {
+  border: 1px solid var(--border-linen);
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+}
+
+.editorial-prose th {
+  background-color: var(--bg-taupe);
+  color: var(--text-saddle);
+  font-weight: 600;
+}
+
+.editorial-prose .katex-display {
+  overflow-x: auto;
+  padding: 0.75rem 0;
+}
+
+/* 隱藏 Google 翻譯原生上方工具列 */
+.goog-te-banner-frame.skiptranslate,
+.VIpgJd-ZVi9od-ORHb-OEVmcd {
+  display: none !important;
+}
+body {
+  top: 0 !important;
+}
