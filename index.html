@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>失智症知識典藏與推廣平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+    <!-- Hero 典藏封面 -->
+    <section class="hairline-box p-8 md:p-14 bg-white mb-12">
+      <p class="font-mono-index text-xs text-[#F37021] tracking-widest mb-3">[VOLUME I · PUBLIC KNOWLEDGE ARCHIVE]</p>
+      <h1 class="font-serif-editorial text-3xl md:text-5xl text-[#1C1917] leading-tight mb-5">
+        以清晰實證的知識典藏，<br />陪伴每個家庭走過記憶的長河
+      </h1>
+      <p class="text-sm md:text-base text-[#6B5E54] max-w-2xl leading-relaxed mb-8">
+        匯聚失智症專有名詞詞庫、年度臨床研究論文、白話衛教指南、影音示範與高齡友善認知遊戲，打造可長期累積、跨語系開放存取的公共知識平台。
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a href="glossary.html" class="btn-hermes px-6 py-2.5 text-sm">探索專有名詞詞庫</a>
+        <a href="papers.html" class="btn-editorial px-6 py-2.5 text-sm">檢索研究論文</a>
+        <a href="games.html" class="btn-editorial px-6 py-2.5 text-sm">開始認知訓練遊戲</a>
+      </div>
+    </section>
+
+    <!-- 七大模組索引格 -->
+    <section>
+      <div class="flex items-end justify-between pb-3 mb-6 hairline-b">
+        <div>
+          <p class="font-mono-index text-xs text-[#6B5E54]">ARCHIVE MODULES</p>
+          <h2 class="font-serif-editorial text-2xl text-[#1C1917]">七大知識典藏模組</h2>
+        </div>
+        <span class="font-mono-index text-xs text-[#6B5E54]">01 — 07</span>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5" id="module-directory"></div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+
+    const MODULES = [
+      { code: "01.", tag: "GLOSSARY", title: "專有名詞詞庫", desc: "五大臨床與照護分類，支援千筆詞條中英文即時檢索、A–Z 索引與白話詳解。", href: "glossary.html" },
+      { code: "02.", tag: "PAPERS", title: "研究論文典藏", desc: "依發表年份與研究類別交叉篩選，提供 DOI 原文連結與 Markdown/LaTeX 摘要。", href: "papers.html" },
+      { code: "03.", tag: "KNOWLEDGE", title: "最新知識推廣", desc: "預防保健、十大警訊、家屬溝通與長照政策新知專欄，附典藏圖牆與分享列。", href: "knowledge.html" },
+      { code: "04.", tag: "VIDEOS", title: "影音與短片專區", desc: "區分 16:9 專題講座長片與 9:16 推廣短片，整合重點時間軸筆記。", href: "videos.html" },
+      { code: "05.", tag: "GAMES", title: "認知訓練遊戲", desc: "模組化外掛登錄架構，內建大字體無焦慮記憶配對與日常順序排列。", href: "games.html" },
+      { code: "06.", tag: "TEAM", title: "跨領域團隊介紹", desc: "臨床醫師、神經科學研究者、介面設計師與社區推廣志工名錄。", href: "team.html" },
+      { code: "07.", tag: "ACHIEVEMENTS", title: "歷年成果專區", desc: "依年度與場域呈現 KPI 數據、現場照片牆、委員會與可擴充自訂子頁。", href: "achievements.html" }
+    ];
+
+    document.getElementById("module-directory").innerHTML = MODULES.map(
+      (m) => `
+      <a href="${m.href}" class="hairline-box p-6 bg-white hover:border-[#F37021] transition-colors flex flex-col justify-between group">
+        <div>
+          <div class="flex items-center justify-between font-mono-index text-xs mb-4">
+            <span class="text-[#F37021] font-medium">${m.code}</span>
+            <span class="text-[#6B5E54]">[${m.tag}]</span>
+          </div>
+          <h3 class="font-serif-editorial text-xl text-[#1C1917] mb-2 group-hover:text-[#F37021] transition-colors">${m.title}</h3>
+          <p class="text-xs text-[#6B5E54] leading-relaxed">${m.desc}</p>
+        </div>
+        <div class="mt-6 pt-3 hairline-t font-mono-index text-[11px] text-[#4A3728]">ENTER MODULE →</div>
+      </a>
+    `
+    ).join("");
+
+    mountNavbar();
+    mountFooter();
+  </script>
+</body>
+</html>
