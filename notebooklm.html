@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>NotebookLM 互動工作區｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+  <main class="max-w-5xl mx-auto px-4 sm:px-6 py-10">
+    <div id="nlm-inline-root" class="hairline-box overflow-hidden"></div>
+  </main>
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { mountNotebookLMInline } from "./components/notebooklm-panel.js";
+
+    mountNavbar();
+    mountFooter();
+    mountNotebookLMInline(document.getElementById("nlm-inline-root"));
+  </script>
+</body>
+</html>
