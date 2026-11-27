@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="data:," />
+  <title>03. 最新知識推廣｜失智症知識典藏平台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600&family=Noto+Serif+TC:wght@500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <link rel="stylesheet" href="styles/editorial.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+</head>
+<body>
+  <div id="site-navbar"></div>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-10">
+    <div class="pb-5 mb-8 hairline-b">
+      <p class="font-mono-index text-xs text-[#F37021]">03. [PUBLIC EDUCATION]</p>
+      <h1 class="font-serif-editorial text-3xl text-[#1C1917] mt-1">最新知識推廣與衛教專欄</h1>
+    </div>
+
+    <div class="grid lg:grid-cols-4 gap-8">
+      <div id="knowledge-sidebar" class="lg:col-span-1"></div>
+      <div class="lg:col-span-3 space-y-6">
+        <div id="knowledge-filter"></div>
+        <div id="knowledge-list" class="space-y-8"></div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script type="module">
+    import { TAXONOMY, getCategoryById } from "./config/taxonomy.config.js";
+    import { mountNavbar } from "./components/navbar.js";
+    import { mountFooter } from "./components/footer.js";
+    import { renderCategorySidebar } from "./components/sidebar.js";
+    import { mountFilterBar } from "./components/filter-bar.js";
+    import { fetchKnowledgePosts } from "./modules/knowledge.module.js";
+    import { renderMarkdown } from "./modules/parser.module.js";
+    import { renderShareBar, bindShareBars } from "./modules/share.module.js";
+    import { escapeHTML, isSafeHttpUrl } from "./modules/sanitizer.module.js";
+
+    const state = { categoryId: "ALL", search: "" };
+
+    document.getElementById("knowledge-sidebar").appendChild(
+      renderCategorySidebar({
+        title: "推廣主題",
+        items: TAXONOMY.knowledge,
+        onSelect: (id) => {
+          state.categoryId = id;
+          loadPosts();
+        }
+      })
+    );
+
+    mountFilterBar(document.getElementById("knowledge-filter"), {
+      placeholder: "搜尋衛教文章標題或關鍵字...",
+      onChange: ({ search }) => {
+        state.search = search;
+        loadPosts();
+      }
+    });
+
+    async function loadPosts() {
+      const el = document.getElementById("knowledge-list");
+      const { data } = await fetchKnowledgePosts(state);
+      if (!data.length) {
+        el.innerHTML = `<div class="hairline-box p-8 text-center text-sm text-[#6B5E54]">目前尚無符合條件的衛教專欄文章。</div>`;
+        return;
+      }
+
+      el.innerHTML = data
+        .map((post) => {
+          const cat = getCategoryById("knowledge", post.category_id);
+          const gallery = Array.isArray(post.gallery_json) ? post.gallery_json : [];
+          return `
+          <article class="hairline-box bg-white overflow-hidden">
+            ${isSafeHttpUrl(post.cover_url) ? `<img src="${post.cover_url}" loading="lazy" alt="${escapeHTML(post.title)}" class="w-full h-64 object-cover hairline-b" />` : ""}
+            <div class="p-6 md:p-8">
+              <div class="flex flex-wrap items-center gap-2 font-mono-index text-xs mb-3">
+                ${post.is_featured ? `<span class="px-2 py-0.5 bg-[#F37021] text-white">FEATURED</span>` : ""}
+                <span class="px-2 py-0.5 bg-[#EFEAE2] text-[#4A3728]">${cat?.code || post.category_id} · ${escapeHTML(post.subcategory || cat?.label || "")}</span>
+              </div>
+              <h2 class="font-serif-editorial text-2xl text-[#1C1917] mb-4">${escapeHTML(post.title)}</h2>
+              <div class="editorial-prose text-sm">${renderMarkdown(post.content_md || "")}</div>
+
+              ${
+                gallery.length
+                  ? `<div class="mt-6 grid sm:grid-cols-2 gap-4">
+                      ${gallery
+                        .map(
+                          (img) => `
+                        <figure class="hairline-box p-2 bg-[#FDFBF7]">
+                          <img src="${img.url}" loading="lazy" alt="${escapeHTML(img.caption || "")}" class="w-full h-44 object-cover" />
+                          <figcaption class="text-xs text-[#6B5E54] mt-2 px-1">${escapeHTML(img.caption || "")}</figcaption>
+                        </figure>
+                      `
+                        )
+                        .join("")}
+                    </div>`
+                  : ""
+              }
+
+              <div class="mt-6 pt-4 hairline-t">${renderShareBar({ title: post.title })}</div>
+            </div>
+          </article>
+        `;
+        })
+        .join("");
+
+      bindShareBars(el);
+    }
+
+    mountNavbar();
+    mountFooter();
+    loadPosts();
+  </script>
+</body>
+</html>
